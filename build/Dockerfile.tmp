@@ -1,0 +1,52 @@
+###
+# Build stage #
+###############
+FROM golang:1.15 AS builder
+
+## SETUP for git
+
+# Copy ssh keys
+COPY SSH_FILE /root/.ssh/KEY
+COPY config /root/.ssh/config
+
+# Copy .gitconfig
+COPY gitconfig /root/.GIT_FILE
+
+## SETUP for the building
+
+# Get the source code
+WORKDIR /go/src/code.it4i.cz/lexis/wp8/
+RUN git clone -b BRANCH git@code.it4i.cz:lexis/wp8/PACKAGE
+
+# Set the workdir
+WORKDIR /go/src/code.it4i.cz/lexis/wp8/PACKAGE/MAIN_FOLDER
+
+# Get the dependencies
+ENV GOPRIVATE=code.it4i.cz
+RUN go mod download
+
+# Build the service
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+RUN go build -a -ldflags "-extldflags \"-static\" -X main.version=VERSION" -o /PACKAGE
+
+###
+# Deploy stage #
+################
+FROM alpine:latest AS deploy
+
+# Update and certs install
+RUN apk update && apk add --no-cache git ca-certificates && update-ca-certificates
+
+# Set the workdir
+WORKDIR /
+
+## Add the wait script to the image
+ADD https://github.com/ufoscout/docker-compose-wait/releases/download/2.7.3/wait /wait
+RUN chmod +x /wait
+
+# Copying the binary
+COPY --from=builder /PACKAGE .
+
+# Entrypoint
+CMD /wait && /PACKAGE -conf=./config

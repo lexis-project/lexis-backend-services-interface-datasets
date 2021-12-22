@@ -1,0 +1,3728 @@
+swagger: '2.0'
+basePath: /api/v0.1.1
+info:
+  title: WP3-backed Data Service API
+  description: An API which supports querying available LEXIS data sets
+  version: 0.1.1
+  contact:
+    email: ruben@lrz.de
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+tags:
+  - name: dataSetManagement
+    description: Actions relating to management of datasets
+  - name: staging
+    description: Actions relating to staging datasets to other zones
+  - name: CompressAPI
+    description: Actions related to compression of datasets into multivolume archives
+  - name: iRODSPermissionManagement
+    description: Actions related to access permissions in iRODS
+  - name: gridftp
+    description: Actions related to dataset access via gridftp (permission management)
+  - name: sshfsexport
+    description: Actions related to export of staged datasets via SSHFS
+  - name: statusManagement
+    description: Actions relating to the reporting of the state of the service
+definitions:
+  StatusMetadata:
+    type: object
+    x-go-type:
+      import:
+        package: "gitlab.com/cyclops-utilities/datamodels"
+      type: JSONdb
+  Status: 
+    type: object
+    properties:
+      AverageResponseTime:
+        type: number
+        format: double
+      EndpointsResponseTime:
+        $ref: '#/definitions/StatusMetadata'
+      LastRequest:
+        type: string
+      RequestsBoT:
+        type: integer 
+      RequestsLastHour:
+        type: integer 
+      RequestsToday:
+        type: integer 
+      SystemState:
+        type: string
+
+  RequestID:
+    type: object
+    required:
+      - request_id
+    properties:
+      request_id:
+        type: string
+        format: uuid
+        example: "31279ed6-e7b1-4c9f-ab26-206c863a2264"
+        description: UUID
+  ItemCreatedResponse:
+    type: object
+    required:
+      - status
+      - internalID
+    properties:
+      status:
+        type: string
+        pattern: '[0-9][0-9][0-9]'
+        example: '201'
+        description: HTTP status code
+      internalID:
+        type: string
+  Message:
+    type: object
+    required:
+      - message
+    properties:
+      message:
+        type: string
+  ErrorResponse:
+    type: object
+    required:
+      - errorString
+    properties:
+      errorString:
+        type: string
+  AccessMode:
+    type: string
+    enum:
+      - public
+      - project
+      - user
+  PushMethod:
+    type: string
+    enum:
+      - empty
+      - directupload
+      - tus
+  ArchiveType:
+    type: string
+    enum:
+      - zip
+      - file
+  CompressMethod:
+    type: string
+    enum:
+      - zip
+      - file
+  Metadata:
+    type: object
+    properties:
+      CustomMetadata:
+        type: object
+      CustomMetadataSchema:
+        type: array
+        items:
+          type: object
+      creator:
+        type: array
+        items:
+          type: string
+      contributor:
+        type: array
+        items:
+          type: string
+      publisher:
+        type: array
+        items:
+          type: string
+      owner:
+        type: array
+        items:
+          type: string
+      identifier:
+        type: string
+        description: Datacite identifier (doi), unused for now
+      AlternateIdentifier:
+        type: array
+        description: DataCite AlternateIdentifier
+        items:
+          type: array
+          minItems: 2
+          maxItems: 2
+          description: Pairs [AlternateIdentifierType, AlternateIdentifier]
+          items:
+            type: string
+      publicationYear:
+        type: string
+      resourceType:
+        type: string
+      resourceTypeGeneral:
+        type: string
+        enum:
+          - "Audiovisual"
+          - "Collection"
+          - "DataPaper"
+          - "Dataset"
+          - "Event"
+          - "Image"
+          - "InteractiveResource"
+          - "Model"
+          - "PhysicalObject"
+          - "Service"
+          - "Software"
+          - "Sound"
+          - "Text"
+          - "Workflow"
+          - "Other"
+      title:
+        type: string
+      relatedIdentifier:
+        type: array
+        items:
+          type: string
+      rights:
+        type: array
+        items:
+          type: string
+      rightsIdentifier:
+        type: array
+        items:
+          type: string
+      rightsURI:
+        type: array
+        items:      
+          type: string
+      scope:
+        type: string
+      format:
+        type: string
+      relatedSoftware:
+        type: array
+        items:
+          type: string
+      Description:
+        type: array
+        items:
+          type: string
+      CreationDate:
+        type: string
+  MetadataQuery:
+    type: object
+    properties:
+      CustomMetadata:
+        type: object
+      access:
+        $ref: '#/definitions/AccessMode'
+      project:
+        type: string
+      creator:
+        type: string
+      contributor:
+        type: string
+      publisher:
+        type: string
+      owner:
+        type: string
+      identifier:
+        type: string
+        description: DataCite identifier (DOI), unused for now
+      internalID:
+        type: string
+        description: iRODS identifier
+      AlternateIdentifier:
+        description: DataCite AlternateIdentifier
+        type: string
+      AlternateIdentifierType:
+        description: DataCite AlternateIdentifierType. Size must match AlternateIdentifier
+        type: string
+      publicationYear:
+        type: string
+      resourceType:
+        type: string
+      resourceTypeGeneral:
+        type: string
+      title:
+        type: string
+      relatedIdentifier:
+        type: string
+      rights:
+        type: string
+      rightsIdentifier:
+        type: string
+      rightsURI:
+        type: string
+      PID:
+        type: string
+      EUDAT/FIO:
+        type: string
+      EUDAT/PARENT:
+        type: string
+      EUDAT/ROR: 
+        type: string
+      EUDAT/FIXED_CONTENT: 
+        type: string
+      "EUDAT/REPLICA":
+        type: string
+      scope:
+        type: string
+      format:
+        type: string
+      relatedSoftware:
+        type: string
+      Description:
+        type: string
+      CreationDate:
+        type: string
+  Location:
+    type: object
+    required:
+      - access
+      - project
+      - internalID
+      - zone
+    properties:
+      access:
+        $ref: '#/definitions/AccessMode'
+      project:
+        type: string
+      internalID:
+        type: string
+      zone:
+        type: string
+        example: "LRZLexisZone"
+  Eudat:
+    type: object
+    properties:
+      "EUDAT/FIO":
+        type: string 
+      "EUDAT/FIXED_CONTENT":
+        type: string
+      "EUDAT/PARENT":
+        type: string      
+      "EUDAT/ROR":
+        type: string
+      "PID":
+        type: string
+      "EUDAT/REPLICA":
+        type: string
+  flags:
+    type: object
+    properties:
+      "encryption":
+        type: string 
+      "compression":
+        type: string
+  MetadataQueryResponse:
+    type: object
+    required:
+      - location
+      - metadata
+      - flags
+    properties:
+      location:
+        $ref: '#/definitions/Location'
+      metadata:
+        $ref: '#/definitions/Metadata'
+      eudat:
+        $ref: '#/definitions/Eudat'
+      flags:
+        $ref: '#/definitions/flags'
+  UserInProject:
+    type: object
+    required:
+      - username
+      - projectname
+    properties:
+      username:
+        type: string
+        description: Username (in iRODS and keycloak)
+      projectname:
+        type: string
+        description: Project name (Keycloak group)
+  DatasetContent:
+    type: object
+    required:
+      - name
+      - type
+    properties:
+      name:
+        type: string
+        description: filename
+      type:
+        type: string
+        description: directory or file
+      size:
+        type: integer
+      create_time:
+        type: string
+      checksum:
+        type: string
+      contents:
+        type: array
+        items: 
+          $ref: '#/definitions/DatasetContent'
+  DataReplication:
+    type: object
+    required: 
+      - status
+    properties:
+      status:
+        type: string
+        description: Status of the data replication process
+        example: "Replication completed"
+      PID:
+        type: string
+        description: EUDAT PID of the replicated data
+        example: "1001/e4495e44-dc84-11ea-9c37-0050568f81d2"
+      target_path:
+        type: string
+        description: Path to where the data are replicated
+        example: "/IT4ILexisZone/project/proj1fc54ae5e387be0d369eddddc2010e5e/datasetL4988"
+  DataSize:
+    type: object
+    required:
+      - result
+    properties:
+      result:
+        type: string
+        description: Status of the datasize get process
+        example: "Done"
+      size:
+        type: string
+        description: dataset size
+        example: "45645352354"
+      totalfiles:
+        type: string
+        description: dataset files
+        example: "343"
+      smallfiles:
+        type: string
+        description: dataset files smaller than 32 MB
+        example: "2"
+  DataEncryption:
+    type: object
+    required:
+      - status
+    properties:
+      status:
+        type: string
+        description: Status of the data encryption/decryption/compression/decompression process
+        example: "Encryption completed"
+      target_path:
+        type: string
+        description: Path to where the data are encrypted
+        example: "/srv/staging_area/burst_buffer/81559c0e-a433-11eb-95ce-3868dd145170/833290c2-a433-11eb-95ce-3868dd145170"
+
+securityDefinitions:
+  Keycloak:
+    type: oauth2
+    flow: accessCode
+    authorizationUrl: 'https:138.246.232.245:6443/auth'
+    tokenUrl: 'https:138.246.232.245:6443/auth'
+security:
+  - Keycloak: []
+paths:
+  /status:
+    get:
+      tags:
+        - statusManagement
+      produces:
+        - application/json
+      summary: Basic status of the system
+      security:
+        - Keycloak: [user]
+        - APIKeyHeader: []
+        - APIKeyParam: []
+      operationId: showStatus
+      responses:
+        '200':
+          description: Status information of the system
+          schema:
+            $ref: "#/definitions/Status"
+  /status/{id}:
+    get:
+      tags:
+        - statusManagement
+      produces:
+        - application/json
+      summary: Basic status of the system
+      security:
+        - Keycloak: [user]
+        - APIKeyHeader: []
+        - APIKeyParam: []
+      operationId: getStatus
+      responses:
+        '200':
+          description: Status information of the system
+          schema:
+            $ref: "#/definitions/Status"
+        '404':
+          description: The endpoint provided doesn't exist
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      parameters:
+        - name: id
+          in: path
+          type: string
+          enum:
+          - status
+          - certificate
+          - cloudnfs
+          - compress
+          - datasetManager
+          - gridmap
+          - project
+          - replicate
+          - sshfs
+          - stagingDownload
+          - steering
+          - support
+          - tus
+          - user
+          required: true
+
+  /staging/download:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+        - application/octet-stream      
+      summary: Download from staging zone
+      description: Download from staging zone
+      parameters:
+        - in: body
+          name: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+            properties:
+              source_system:
+                type: string
+                enum: 
+                  - "lrz_staging_area"
+              source_path:
+                type: string
+      responses:
+        '400':
+          description: Malformed Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: Forbidden
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '502':
+          description: Bad Gateway 
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '503':
+          description: Server error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '200':
+          description: Successful request
+          schema:
+            type: file
+  /compress/zip:
+    post:
+      tags:
+        - staging
+        - CompressAPI
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Creates a multipart zip file from a staging api source_system/source_path combination
+      operationId: CompressToZip
+      description: Creates a multipart zip file from a staging api source_system/source_path combination
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema: 
+            type: object
+            required: 
+              - source_system
+              - source_path
+              - size
+            properties:
+              source_system:
+                type: string
+                enum:
+                  - "lrz_iRODS"
+              source_path:
+                type: string
+              size:
+                type: integer
+      responses:
+        '400':
+          description: Malformed Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: Forbidden
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '502':
+          description: Bad Gateway 
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '503':
+          description: Server error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '201':
+          description: Request was added to the queue
+          schema:
+            $ref: "#/definitions/RequestID"
+
+  /compress/zip/{request_id}:
+    get:
+      security: []
+      tags:
+        - staging
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Check the status of a multipart zip creation.
+      operationId: CheckCompressToZipStatus
+      description: Check the status of a multipart zip creation.
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required: 
+              - status
+            properties:
+              status: 
+                type: string
+              target_paths:
+                type: array
+                description: Multiple paths for CompressAPI endpoints
+                items:
+                  type: string
+                  
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+          
+  /gridftp/gridmap:
+    post:
+      tags:
+        - dataSetManagement
+        - gridftp
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Add a DN entry to the DDI B2STAGE GridFTP service
+      operationId: AddGridmapEntry
+      description: Add a DN entry to the DDI B2STAGE GridFTP service
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - dn
+            properties:
+              dn:
+                type: string
+              user:
+                type: string
+      responses:
+        '201':
+          description: DN added
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: Forbidden
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '503':
+          description: Server error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    delete:
+      tags:
+        - dataSetManagement
+        - gridftp
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Remove a DN entry to the DDI B2STAGE GridFTP service
+      operationId: RemoveGridmapEntry
+      description: Remove a DN entry to the DDI B2STAGE GridFTP service
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            properties:
+              user:
+                type: string
+      responses:
+        '204':
+          description: DN removed
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: Forbidden
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '503':
+          description: Server error
+          schema:
+            $ref: "#/definitions/ErrorResponse"      
+  /ssh/sshfsexport:
+    post:
+      tags:
+        - dataSetManagement
+        - sshfsexport
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Export a directory of the DDI for use via SSHFS
+      operationId: CreateSSHFSExport
+      description: Export a directory of the DDI for use via SSHFS
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - host
+              - pubkey
+              - path
+            properties:
+              host:
+                type: string
+                example: "141.40.145.102"
+              pubkey:
+                type: string
+              path:
+                type: string
+      responses:
+        '201':
+          description: Export created
+          schema:
+            type: object
+            required:
+              - user
+              - sshfs
+            properties:
+              user:
+                type: string
+                example: "qlecvxbndl"
+              sshfs:
+                type: string
+                example: "qlecvxbndl@lexis-test.srv.lrz.de:"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to transfer from or to is not readable or writable by the user. User doesn't have the correct rights to either read the source file or write on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '503':
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    delete:
+      tags:
+        - dataSetManagement
+        - sshfsexport
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Export a directory of the DDI for use via SSHFS
+      operationId: DeleteSSHFSExport
+      description: Remove an SSHFS export of a directory of the DDI
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - user
+              - path
+            properties:
+              user:
+                type: string
+                example: "qlecvxbndl"
+              path:
+                type: string
+      responses:
+        '204':
+          description: Export removed
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to transfer from or to is not readable or writable by the user. User doesn't have the correct rights to either read the source file or write on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: The resource (username, path or both) does not exist 
+          schema:
+           $ref: "#/definitions/ErrorResponse"
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '503':
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /staging/info:
+    get:
+      tags:
+        - staging
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Lists possible target / source systems
+      operationId: StagingInfo
+      responses:
+        '200':
+          description: List of possible target / source 
+          schema:
+            type: array
+            items:
+              type: string
+  /staging/stage:
+    post:
+      tags:
+        - staging
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Stage a dataset or subdataset (by enqueuing the request for latter processing)
+      operationId: Stage
+      description: Stage a dataset or subdataset (by enqueuing the request for latter processing)
+      responses:
+        '201':
+          description: The response code means that the data transfer has been initiated. Status of the transfer can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to transfer from or to is not readable or writable by the user. User doesn't have the correct rights to either read the source file or write on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path or the the target path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path or the target path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+              - target_system
+              - target_path
+              - encryption
+              - compression
+            properties:
+              metadata:
+                $ref: "#/definitions/Metadata"
+              source_system:
+                type: string
+              target_system:
+                type: string
+              source_path:
+                type: string
+              target_path:
+                type: string
+              job_id:
+                type: integer
+              task_id:
+                type: integer
+              heappe_url:
+                type: string
+              encryption:
+                type: string
+                enum:
+                  - "yes"
+                  - "no"
+              compression:
+                type: string
+                enum:
+                  - "yes"
+                  - "no"
+
+  /staging/delete:
+    delete:
+      tags:
+        - staging
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: This is called when a user request to delete data. This is only allowed on the staging systems.
+      operationId: Delete
+      description: This is called when a user request to delete data. This is only allowed on the staging systems.
+      responses:
+        '201':
+          description: The response code means that the data deletion has been initiated. Status of the deletion can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data deletion can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to delete from or to is not readable or writable by the user. User doesn't have the correct rights to delete the data on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that the the target path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the target path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - target_system
+              - target_path
+            properties:
+              target_system:
+                type: string
+              target_path:
+                type: string
+  /staging/stage/{request_id}:
+    get:
+      security: []
+      tags:
+        - staging
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Check the status of a transfer
+      operationId: CheckStageStatus
+      description: Check the status of a transfer
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required: 
+              - status
+            properties:
+              status: 
+                type: string
+              target_path:
+                type: string
+                description: Single path for staging endpoints
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+          
+          
+  /staging/delete/{request_id}:
+    get:
+      security: []
+      tags:
+        - staging
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Check the status of a delete request
+      operationId: CheckDeletionStatus
+      description: Check the status of a delete request
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required: 
+              - status
+            properties:
+              status: 
+                type: string
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /cloud/add/{param}:
+    get:
+      security: []
+      tags:
+        - staging
+      produces:
+        - application/json
+      summary: Check the status of a nfs export add request for the cloud
+      operationId: CheckCloudNFSExportAddStatus
+      description: Check the status of a nfs export add request for the cloud
+      parameters:
+        - in: path
+          name: param
+          required: true
+          type: string
+          description: queue identifier returned by a POST request at /cloud/add/{param}
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required: 
+              - status
+            properties:
+              status: 
+                type: string
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and NFS export can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: The IP is outside of the allowed range 
+          schema:
+            $ref: "#/definitions/ErrorResponse"          
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    post:
+      security: 
+      - Keycloak: []
+      tags:
+        - staging
+      produces:
+        - application/json
+      summary: Request that an nfs export be created for an LRZ cloud instance
+      operationId: CloudNFSExportAdd
+      description: Request that an nfs export be created for an LRZ cloud instance
+      parameters:
+        - in: path
+          name: param
+          required: true
+          type: string
+          description: IP of the cloud machine
+      responses:
+        '201':
+          description: The response code means that the request for addition has been initiated. Status of the addition process can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: The IP is outside of the allowed range 
+          schema:
+            $ref: "#/definitions/ErrorResponse" 
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /cloud/remove/{param}:
+    get:
+      security: []
+      tags:
+        - staging
+      produces:
+        - application/json
+      summary: Check the status of a nfs export remove request for the cloud
+      operationId: CheckCloudNFSExportRemoveStatus
+      description: Check the status of a nfs export remove request for the cloud
+      parameters:
+        - in: path
+          name: param
+          required: true
+          type: string
+          description: queue identifier returned by a POST request at /cloud/remove/{param}
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required: 
+              - status
+            properties:
+              status: 
+                type: string
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+    post:
+      security: 
+      - Keycloak: []
+      tags:
+        - staging
+      produces:
+        - application/json
+      summary: Request that an nfs export be removed for an LRZ cloud instance
+      operationId: CloudNFSExportRemove
+      description: Request that an nfs export be removed for an LRZ cloud instance
+      parameters:
+        - in: path
+          name: param
+          required: true
+          type: string
+          description: IP of the cloud machine
+      responses:
+        '201':
+          description: The response code means that the request for removal has been initiated. Status of the removal process can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /replicate:
+    post:
+      tags:
+        - dataSetManagement
+        - EUDATReplication
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: This is called when a user requests data to be replicated between different systems. The request will be added to the jobs queue.
+      operationId: Replicate
+      description: This is called when a user requests data to be replicated between different systems. The request will be added to the jobs queue.
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+              - target_system
+            properties:
+              source_system:
+                type: string
+              target_system:
+                type: string
+              source_path:
+                type: string
+              target_path:
+                type: string
+      responses:
+        '201':
+          description: The response code means that the data transfer has been initiated. Status of the transfer can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to transfer from or to is not readable or writable by the user. User doesn't have the correct rights to either read the source file or write on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path or the the target path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path or the target path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /replicate/{request_id}:
+    get:
+      tags:
+        - dataSetManagement
+        - EUDATReplication
+      produces:
+        - application/json
+      summary: This is called when a user requests to check the status of his data replication
+      operationId: CheckReplicateStatus
+      description: This is called when a user requests to check the status of his data replication
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            $ref: "#/definitions/DataReplication"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to transfer from or to is not readable or writable by the user. User doesn't have the correct rights to either read the source file or write on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path or the the target path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path or the target path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /pid/assign:
+    post:
+      tags:
+        - dataSetManagement
+        - EUDATReplication
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: This is called when a user requests PID assignment to a dataset.
+      operationId: PID
+      description: This is called when a user requests PID assignment to a dataset.
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+            properties:
+              parent_pid:
+                type: string
+              source_system:
+                type: string
+              source_path:
+                type: string
+      responses:
+        '201':
+          description: This is called when a user requests PID assignment to a dataset.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to transfer from or to is not readable or writable by the user. User doesn't have the correct rights to either read the source file or write on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path or the the target path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path or the target path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /pid/{request_id}:
+    get:
+      tags:
+        - dataSetManagement
+        - EUDATReplication
+      produces:
+        - application/json
+      summary: This is called when a user requests to check the status of the PID assignment
+      operationId: CheckPIDStatus
+      description: This is called when a user requests to check the status of his data replication
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            $ref: "#/definitions/DataReplication"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to transfer from or to is not readable or writable by the user. User doesn't have the correct rights to either read the source file or write on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path or the the target path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path or the target path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /data/size:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: This is called when a user requests size of a dataset.
+      operationId: Size
+      description: This is called when a user requests size of a dataset.
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - target_system
+              - target_path
+            properties:
+              target_system:
+                type: string
+              target_path:
+                type: string
+      responses:
+        '201':
+          description: This is called when a user requests size of a dataset.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to transfer from or to is not readable or writable by the user. User doesn't have the correct rights to either read the source file or write on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path or the the target path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path or the target path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /data/size/{request_id}:
+    get:
+      tags:
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: This is called when a user requests to check the status of datasize request
+      operationId: CheckSizeStatus
+      description: This is called when a user requests to check the status of datasize request
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            $ref: "#/definitions/DataSize"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and data transfer can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to transfer from or to is not readable or writable by the user. User doesn't have the correct rights to either read the source file or write on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path or the the target path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path or the target path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /staging/duplicate:
+    post:
+      tags:
+        - staging
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Duplicate a dataset or subdataset (by enqueuing the request for latter processing)
+      operationId: Duplicate
+      description: Duplicate a dataset or subdataset (by enqueuing the request for latter processing)
+      responses:
+        '201':
+          description: The response code means that the duplication has been initiated. Status of the transfer can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and duplication can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to duplicate from or to is not readable or writable by the user. User doesn't have the correct rights to either read the source file or write on the target system location.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path or the the target path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path or the target path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+            properties:
+              source_system:
+                type: string
+              target_system:
+                type: string
+              source_path:
+                type: string
+              target_path:
+                type: string
+              title:
+                type: string
+
+  /staging/duplicate/{request_id}:
+    get:
+      security: []
+      tags:
+        - staging
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Check the status of duplication
+      operationId: CheckDuplicationStatus
+      description: Check the status of duplication
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+              target_path:
+                type: string
+                description: Single path for staging endpoints
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and duplication can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the data transfer steering server. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+
+  /cert:
+    get:
+      tags:
+        - dataSetManagement
+      produces:
+        - application/octet-stream
+      summary: download public key for WP3 APIs
+      operationId: Certificate
+      description: download public key for WP3 APIs
+      responses: 
+        '200':
+          description: Certificate download in body of response
+          schema:
+            type: file
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /dataset/download:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/octet-stream
+      summary: DownloadDataset
+      operationId: DownloadDataset
+      description: Downloads a dataset
+      parameters:
+        - in: body
+          name: json
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - internalID
+              - access
+              - project
+            properties:
+              internalID:
+                type: string
+              access:
+                $ref: '#/definitions/AccessMode'
+              project:
+                type: string
+              push_method:
+                type: string
+                enum:
+                  - directupload
+              archivetype:
+                $ref: '#/definitions/ArchiveType'
+              path:
+                type: string
+              zone:
+                type: string
+      responses:
+        '200':
+          description: zip containing dataset
+          schema:
+            type: file
+        '400':
+          description: Malformed Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /dataset:
+    delete:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Delete Dataset
+      operationId: DeleteDataset
+      description: |
+        Deletes a dataset by internalID (or subdataset by path). Since this is
+        a synchronous operation, it can only be used in small datasets to avoid 
+        an HTTP timeout. Use the staging / delete endpoint for large datasets.
+      parameters:
+        - in: body
+          name: json
+          description: parameter
+          required: true
+          schema:
+            type: object
+            required:
+              - internalID
+              - access
+              - project
+            properties:
+              internalID:
+                type: string
+              access:
+                $ref: '#/definitions/AccessMode'
+              project:
+                type: string
+              path:
+                type: string
+              zone:
+                type: string
+      responses:
+        '201':
+          description: >-
+            The delete request was enqueued. StagingAPI and requestID can be
+            concatenated to obtain a query URL about this request.
+          schema:
+            type: object
+            properties:
+              internalID:
+                type: string
+              stagingAPI:
+                type: string
+              request_id:
+                type: string
+        '204':
+          description: Dataset does not exist
+        '400':
+          description: Malformed Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '403':
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Create a dataset
+      operationId: createDataset
+      description: Creates a new dataset
+      responses:
+        '201':
+          description: dataset created
+          schema:
+            $ref: '#/definitions/ItemCreatedResponse'
+        '200':
+          description: dataset modified
+          schema:
+            $ref: '#/definitions/ItemCreatedResponse'
+        '400':
+          description: 'invalid input, object invalid'
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '403':
+          description: User not authorized to perform action
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: unexpected error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      parameters:
+        - in: body
+          name: dataset
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - push_method
+              - access
+              - project
+            properties:
+              path:
+                type: string
+              push_method:
+                $ref: '#/definitions/PushMethod'
+              compress_method:
+                $ref: '#/definitions/CompressMethod'
+              file:
+                type: string
+                description: json-encoded file or zip (depending on compress_method)
+              name:
+                type: string
+                description: name of the file if compress_method is file
+              internalID:
+                type: string
+              access:
+                $ref: '#/definitions/AccessMode'
+              project:
+                type: string
+              metadata:
+                $ref: '#/definitions/Metadata'
+              enc:
+                type: string
+                enum:
+                  - "yes"
+                  - "no"
+              comp:
+                type: string
+                enum:
+                  - "yes"
+                  - "no"
+              zone:
+                type: string
+  /dataset/search/metadata:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Search for datasets based on metadata
+      operationId: QueryDatasets
+      description: Search for datasets based on metadata
+      responses:
+        '200':
+          description: Metadata for matching datasets returned
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/MetadataQueryResponse'
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Authorization failed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: unexpected error connecting to further backends
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      parameters:
+        - in: body
+          name: metadataQuery
+          required: true
+          schema:
+            $ref: '#/definitions/MetadataQuery'
+          description: metadata relating to dataset which is being searched for
+    delete:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: 'Search for datasets based on metadata, and delete them'
+      operationId: DeleteDatasetByMetadata
+      description: 'Search for datasets based on metadata, and delete them'
+      responses:
+        '204':
+          description: datasets were deleted
+        '400':
+          description: malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Authorization failed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '403':
+          description: The user does not have permission to remove dataset
+          schema:
+            type: object
+            required:
+              - errorString
+            properties:
+              errorString:
+                type: string
+              permission_error:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - internalID
+                  properties:
+                    internalID:
+                      type: string
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: unexpected error connecting to further backends
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      parameters:
+        - in: body
+          name: metadataQuery
+          required: true
+          schema:
+            $ref: '#/definitions/MetadataQuery'
+          description: metadata relating to dataset which is being searched for
+  /dataset/checkpermission:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      summary: Check if a user has permission to access a DDI location for writing
+      description: Check if a user has permission to access a DDI location for writing
+      operationId: CheckPermission
+      parameters:
+        - in: body
+          name: Access
+          required: true
+          schema:
+            type: object
+            required:
+              - access
+              - project
+            properties:
+              access:
+                $ref: '#/definitions/AccessMode'
+              project:
+                type: string
+                example: wp6
+      responses:
+        '200':
+          description: User has permission to write
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+                pattern: '200'
+                example: '200'
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Authorization failed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '403':
+          description: User does not have permission
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: Error accessing backend service
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /dataset/listing:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: List file contents of a dataset.
+      operationId: Listing
+      description: List file contents of a dataset.
+      parameters:
+        - in: body
+          name: json
+          description: parameter
+          required: true
+          schema:
+            type: object
+            required:
+              - internalID
+              - access
+              - project
+            properties:
+              internalID:
+                type: string
+              access:
+                $ref: '#/definitions/AccessMode'
+              project:
+                type: string
+              path:
+                type: string
+                default: ""
+              recursive:
+                type: boolean
+                default: true
+              zone:
+                type: string
+      responses:
+        '200':
+          description: Content of the dataset
+          schema:
+            $ref: '#/definitions/DatasetContent'
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Authorization failed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '403':
+          description: User does not have permission
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: Error accessing backend service
+          schema:
+            $ref: '#/definitions/ErrorResponse'     
+  /dataset/upload/:
+    parameters: 
+        - in: header
+          name: Tus-Resumable
+          type: string
+          enum: 
+            - "1.0.0"
+          required: true
+          description: Protocol version  
+    post:
+      tags:
+        - dataSetManagement
+      summary: An empty POST request is used to create a new upload resource. The Upload-Length header indicates the size of the entire upload in bytes.
+      description: Endpoint for the Creation extension
+      parameters:
+        - in: header
+          name: Content-Length
+          type: integer
+          description: Must be 0 for creation extension. May be a positive number for creation-with-upload extension.
+        - in: header
+          name: Upload-Length
+          type: integer
+          description: "The Upload-Length request and response header indicates the size of the entire upload in bytes. The value MUST be a non-negative integer. In the concatenation extension, the Client MUST NOT include the Upload-Length header in the final upload creation"
+          required: false
+        - in: header
+          name: Upload-Metadata
+          type: string
+          description: "Added by the Creation extension. The Upload-Metadata request and response header MUST consist of one or more comma-separated key-value pairs. The key and value MUST be separated by a space. The key MUST NOT contain spaces and commas and MUST NOT be empty. The key SHOULD be ASCII encoded and the value MUST be Base64 encoded. All keys MUST be unique. The value MAY be empty. In these cases, the space, which would normally separate the key and the value, MAY be left out. Since metadata can contain arbitrary binary values, Servers SHOULD carefully validate metadata values or sanitize them before using them as header values to avoid header smuggling."
+          required: false
+        - in: header
+          name: Upload-Concat
+          type: string
+          description: "Added by the Concatenation extension. The Upload-Concat request and response header MUST be set in both partial and final upload creation requests. It indicates whether the upload is either a partial or final upload. If the upload is a partial one, the header value MUST be partial. In the case of a final upload, its value MUST be final followed by a semicolon and a space-separated list of partial upload URLs that will be concatenated. The partial uploads URLs MAY be absolute or relative and MUST NOT contain spaces as defined in RFC 3986."
+          required: false
+        - in: header
+          name: Upload-Defer-Length
+          type: integer
+          enum:
+            - 1
+          description: "Added by the creation-defer-length extension. The Upload-Defer-Length request and response header indicates that the size of the upload is not known currently and will be transferred later. Its value MUST be 1. If the length of an upload is not deferred, this header MUST be omitted."
+          required: false
+        - in: header
+          name: Upload-offset
+          type: integer
+          required: false
+        - in: header
+          name: Upload-Checksum
+          type: string
+          description: Added by the checksum extension. The Upload-Checksum request header contains information about the checksum of the current body payload. The header MUST consist of the name of the used checksum algorithm and the Base64 encoded checksum separated by a space.
+          required: false
+      responses:
+        201:
+          description: Created
+          headers:
+            Location:
+              type: string
+              description: Url of the created resource.
+            Tus-Resumable:
+              type: string
+              enum: 
+                - "1.0.0"
+            Upload-Offset: 
+              type: integer
+              description: Added by the Creation With Upload Extension. The Upload-Offset request and response header indicates a byte offset within a resource. The value MUST be a non-negative integer. 
+            Upload-Expires:
+              type: string
+              description: "Added by the Creation With Upload Extension in combination with the expiration extension. The Upload-Expires response header indicates the time after which the unfinished upload expires. A Server MAY wish to remove incomplete uploads after a given period of time to prevent abandoned uploads from taking up extra storage. The Client SHOULD use this header to determine if an upload is still valid before attempting to resume the upload. This header MUST be included in every PATCH response if the upload is going to expire. If the expiration is known at the creation, the Upload-Expires header MUST be included in the response to the initial POST request. Its value MAY change over time. If a Client does attempt to resume an upload which has since been removed by the Server, the Server SHOULD respond with the 404 Not Found or 410 Gone status. The latter one SHOULD be used if the Server is keeping track of expired uploads. In both cases the Client SHOULD start a new upload. The value of the Upload-Expires header MUST be in RFC 7231 datetime format."
+        '401':
+          description: Authorization failed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        413:
+          description: If the length of the upload exceeds the maximum, which MAY be specified using the Tus-Max-Size header, the Server MUST respond with the 413 Request Entity Too Large status.
+          headers:
+            Tus-Resumable:
+              type: string
+              enum: 
+                - "1.0.0"
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        412:
+          description: Precondition Failed
+          headers:
+            Tus-Resumable:
+              type: string
+              enum: 
+                - "1.0.0"
+            Tus-Version:
+              type: string
+              description: The Tus-Version response header MUST be a comma-separated list of protocol versions supported by the Server. The list MUST be sorted by Server's preference where the first one is the most preferred one.      
+        '415':
+          description: Added by the Creation With Upload Extension. Content-Type was not application/offset+octet-stream
+          headers:
+            Tus-Resumable:
+              type: string
+              enum: 
+                - "1.0.0"
+              description: Protocol version 
+        '400':
+          description: "Added by the Creation With Upload Extension in combination with the checksum extension. The checksum algorithm is not supported by the server"
+          headers:
+            Tus-Resumable:
+              type: string
+              enum: 
+                - "1.0.0"
+              description: Protocol version 
+        '460':
+          description: "Added by the Creation With Upload Extension in combination with the checksum extension. Checksums mismatch"
+          headers:
+            Tus-Resumable:
+              type: string
+              enum: 
+                - "1.0.0"
+              description: Protocol version           
+    options:
+      tags:
+        - dataSetManagement
+      summary:  Request to gather information about the Server's current configuration
+      description: An OPTIONS request MAY be used to gather information about the Server's current configuration. A successful response indicated by the 204 No Content or 200 OK status MUST contain the Tus-Version header. It MAY include the Tus-Extension and Tus-Max-Size headers.
+      responses:
+        200:
+          description: Success
+          headers:
+            Tus-Version:
+              type: string
+              description: The Tus-Version response header MUST be a comma-separated list of protocol versions supported by the Server. The list MUST be sorted by Server's preference where the first one is the most preferred one.
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version
+            Tus-Max-Size:
+              type: integer
+              description: The Tus-Max-Size response header MUST be a non-negative integer indicating the maximum allowed size of an entire upload in bytes. The Server SHOULD set this header if there is a known hard limit.
+            Tus-Extension:
+              type: string
+              description: The Tus-Extension response header MUST be a comma-separated list of the extensions supported by the Server. If no extensions are supported, the Tus-Extension header MUST be omitted.
+            Tus-Checksum-Algorithm:
+              type: string
+              description: Added by the checksum extension. The Tus-Checksum-Algorithm response header MUST be a comma-separated list of the checksum algorithms supported by the server.
+        204:
+          description: Success
+          headers:
+            Tus-Version:
+              type: string
+              description: The Tus-Version response header MUST be a comma-separated list of protocol versions supported by the Server. The list MUST be sorted by Server's preference where the first one is the most preferred one.
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+            Tus-Max-Size:
+              type: integer  
+              description: The Tus-Max-Size response header MUST be a non-negative integer indicating the maximum allowed size of an entire upload in bytes. The Server SHOULD set this header if there is a known hard limit.
+            Tus-Extension:
+              type: string
+              description: The Tus-Extension response header MUST be a comma-separated list of the extensions supported by the Server. If no extensions are supported, the Tus-Extension header MUST be omitted.    
+            Tus-Checksum-Algorithm:
+              type: string
+              description: Added by the checksum extension. The Tus-Checksum-Algorithm response header MUST be a comma-separated list of the checksum algorithms supported by the server.
+        '401':
+          description: Authorization failed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /dataset/upload/{id}:
+    parameters:
+        - in: path
+          name: id
+          type: string
+          required: true
+        - in: header
+          name: Tus-Resumable
+          type: string
+          enum:
+            - "1.0.0"
+          required: true
+          description: Protocol version  
+    delete:
+      tags:
+        - dataSetManagement
+      summary: Added by the Termination extension. 
+      operationId: FilesDelete
+      description: When receiving a DELETE request for an existing upload the Server SHOULD free associated resources and MUST respond with the 204 No Content status confirming that the upload was terminated. For all future requests to this URL, the Server SHOULD respond with the 404 Not Found or 410 Gone status.
+      responses:
+        204:
+          description: Upload was terminated
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+        '401':
+          description: Authorization failed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        412:
+          description: Precondition Failed
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+            Tus-Version:
+              type: string
+              description: The Tus-Version response header MUST be a comma-separated list of protocol versions supported by the Server. The list MUST be sorted by Server's preference where the first one is the most preferred one.      
+
+    head:
+      tags:
+        - dataSetManagement
+      summary: Used to determine the offset at which the upload should be continued.
+      operationId: FilesHead
+      description: Used to determine the offset at which the upload should be continued.
+      responses:
+        '200':
+          description: Returns offset
+          headers:
+            Upload-Offset:
+              type: integer
+              description: The Upload-Offset request and response header indicates a byte offset within a resource. The value MUST be a non-negative integer. Offset at which the upload should be continued.
+            Upload-Length:
+               type: integer
+               description: If the size of the upload is known, the Server MUST include the Upload-Length header in the response.
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version   
+            Cache-Control:
+              type: string
+              enum:
+                - "no-store"
+        '401':
+          description: Authorization failed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '404':
+          description: If the resource is not found, the Server SHOULD return either the 404 Not Found, 410 Gone or 403 Forbidden status without the Upload-Offset header.
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+        '410':
+          description: If the resource is not found, the Server SHOULD return either the 404 Not Found, 410 Gone or 403 Forbidden status without the Upload-Offset header.
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+        '403':
+          description: If the resource is not found, the Server SHOULD return either the 404 Not Found, 410 Gone or 403 Forbidden status without the Upload-Offset header.          
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        412:
+          description: Precondition Failed
+          headers:
+            Tus-Version:
+              type: string
+              description: The Tus-Version response header MUST be a comma-separated list of protocol versions supported by the Server. The list MUST be sorted by Server's preference where the first one is the most preferred one.      
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+    patch:
+      tags:
+        - dataSetManagement
+      summary: Used to resume the upload
+      operationId: FilePatch
+      description: "The Server SHOULD accept PATCH requests against any upload URL and apply the bytes contained in the message at the given offset specified by the Upload-Offset header. All PATCH requests MUST use Content-Type: application/offset+octet-stream, otherwise the server SHOULD return a 415 Unsupported Media Type status."
+      consumes:
+        - application/offset+octet-stream
+      parameters:
+        - in: body
+          name: Body
+          schema:
+            type: string
+        - in: header
+          name: Content-Length
+          type: integer
+          required: true
+        - in: header
+          name: Upload-offset
+          type: integer
+          required: true 
+          description: The Upload-Offset request and response header indicates a byte offset within a resource. The value MUST be a non-negative integer.
+        - in: header
+          name: Upload-Checksum
+          type: string
+          description: Added by the checksum extension. The Upload-Checksum request header contains information about the checksum of the current body payload. The header MUST consist of the name of the used checksum algorithm and the Base64 encoded checksum separated by a space.
+      responses:
+        '204':
+          description: Upload offset was updated
+          headers:
+            Upload-Offset:
+              type: integer
+              description: The Upload-Offset request and response header indicates a byte offset within a resource. The value MUST be a non-negative integer. 
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version
+            Upload-Expires:
+              type: string
+              description: "Added by the expiration extension. The Upload-Expires response header indicates the time after which the unfinished upload expires. A Server MAY wish to remove incomplete uploads after a given period of time to prevent abandoned uploads from taking up extra storage. The Client SHOULD use this header to determine if an upload is still valid before attempting to resume the upload. This header MUST be included in every PATCH response if the upload is going to expire. If the expiration is known at the creation, the Upload-Expires header MUST be included in the response to the initial POST request. Its value MAY change over time. If a Client does attempt to resume an upload which has since been removed by the Server, the Server SHOULD respond with the 404 Not Found or 410 Gone status. The latter one SHOULD be used if the Server is keeping track of expired uploads. In both cases the Client SHOULD start a new upload. The value of the Upload-Expires header MUST be in RFC 7231 datetime format."
+        '401':
+          description: Authorization failed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '415':
+          description: Content-Type was not application/offset+octet-stream
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+        '404':
+          description: PATCH request against a non-existent resource
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+        '410':
+          description: PATCH request against a non-existent resource
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+        '403':
+          description: "In the concatenation extension, the Server MUST respond with the 403 Forbidden status to PATCH requests against a final upload URL and MUST NOT modify the final or its partial uploads."
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+        '400':
+          description: "Added by the checksum extension. The checksum algorithm is not supported by the server"
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+        '460':
+          description: "Added by the checksum extension. Checksums mismatch"
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        412:
+          description: Precondition Failed
+          headers:
+            Tus-Resumable:
+              type: string
+              enum:
+                - "1.0.0"
+              description: Protocol version 
+            Tus-Version:
+              type: string
+              description: The Tus-Version response header MUST be a comma-separated list of protocol versions supported by the Server. The list MUST be sorted by Server's preference where the first one is the most preferred one.      
+  /user:
+    post:
+      tags:
+        - dataSetManagement
+        - iRODSPermissionManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Create a user in iRODS WP3 DDI and connect to Keycloak
+      operationId: CreateUser
+      description: Create a user in iRODS WP3 DDI and connect to Keycloak
+      parameters:
+        - in: body
+          name: UserInfo
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+              - id
+            properties:
+              username:
+                type: string
+                description: Keycloak Username
+              id:
+                type: string
+                description: Keycloak ID
+                format: uuid
+                example: aaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+      responses:
+        '201':
+          description: User was created
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '403':
+          description: Permission denied
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: User already exists
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '503':
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    delete:
+      tags:
+        - dataSetManagement
+        - iRODSPermissionManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Delete a user in iRODS WP3 DDI
+      operationId: DeleteUser
+      description: Delete a user in iRODS WP3 DDI.
+      parameters:
+        - in: body
+          name: User
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: Keycloak Username
+      responses:
+        '204':
+          description: User was deleted
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /project:
+    post:
+      tags:
+        - dataSetManagement
+        - iRODSPermissionManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Create a project in iRODS WP3 DDI
+      operationId: CreateProject
+      description: Create a project in iRODS WP3 DDI
+      parameters:
+        - in: body
+          name: ProjectInfo
+          required: true
+          schema:
+            type: object
+            required:
+              - projectname
+            properties:
+              projectname:
+                type: string
+                description: Project name (Keycloak group)
+      responses:
+        '201':
+          description: Project was created
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '403':
+          description: Permission denied
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: 'Conflict: the project already exists'
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    delete:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Delete a project in iRODS WP3 DDI
+      operationId: DeleteProject
+      description: Delete a project in iRODS WP3 DDI.
+      parameters:
+        - in: body
+          name: ProjectInfo
+          required: true
+          schema:
+            type: object
+            required:
+              - name
+            properties:
+              name:
+                type: string
+                description: Project name (Keycloak group)
+      responses:
+        '204':
+          description: Project was deleted or does not exist
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /project/user:
+    post:
+      tags:
+        - dataSetManagement
+        - iRODSPermissionManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Add a user to a project in iRODS WP3 DDI
+      operationId: AddProjectUser
+      description: Add a user to a project in iRODS WP3 DDI
+      parameters:
+        - in: body
+          name: ProjectAndUserInfo
+          required: true
+          schema:
+            $ref: '#/definitions/UserInProject'
+      responses:
+        '201':
+          description: User was added to the project
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: 'Conflict, action could not be performed'
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    delete:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Remove user from project in iRODS WP3 DDI
+      operationId: DeleteProjectUser
+      description: Remove user from project in iRODS WP3 DDI
+      parameters:
+        - in: body
+          name: ProjectAndUserInfo
+          required: true
+          schema:
+            $ref: '#/definitions/UserInProject'
+      responses:
+        '204':
+          description: User was removed from project
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: 'Conflict, action could not be performed'
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /project/admin:
+    post:
+      tags:
+        - dataSetManagement
+        - iRODSPermissionManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Add an administrator user to a project in iRODS WP3 DDI
+      operationId: AddProjectAdmin
+      description: Add an administrator user to a project in iRODS WP3 DDI
+      parameters:
+        - in: body
+          name: ProjectAndUserInfo
+          required: true
+          schema:
+            $ref: '#/definitions/UserInProject'
+      responses:
+        '201':
+          description: Admin was added to Project
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: 'Conflict, action could not be performed'
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    delete:
+      tags:
+        - dataSetManagement
+        - iRODSPermissionManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Remove user from project in iRODS WP3 DDI
+      operationId: DeleteProjectAdmin
+      description: Remove user from project in iRODS WP3 DDI
+      parameters:
+        - in: body
+          name: ProjectAndUserInfo
+          required: true
+          schema:
+            $ref: '#/definitions/UserInProject'
+      responses:
+        '204':
+          description: User was deleted from admin status
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '409':
+          description: 'Conflict, action could not be performed'
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+  /support:
+    post:
+      tags:
+        - dataSetManagement
+        - iRODSPermissionManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Add a user to a support duties in iRODS WP3 DDI
+      operationId: AddSupportUser
+      description: Add a user to a support duties in iRODS WP3 DDI
+      parameters:
+        - in: body
+          name: Username
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: Keycloak / iRODS Username
+      responses:
+        '201':
+          description: User was added to support group
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+    delete:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Remove user from support duties in iRODS WP3 DDI
+      operationId: DeleteSupportUser
+      description: Remove user from support duties in iRODS WP3 DDI
+      parameters:
+        - in: body
+          name: Username
+          required: true
+          schema:
+            type: object
+            required:
+              - username
+            properties:
+              username:
+                type: string
+                description: Keycloak / iRODS Username
+      responses:
+        '204':
+          description: User was removed from support duties
+        '400':
+          description: Malformed request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '401':
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '500':
+          description: Internal error processing request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        '502':
+          description: Bad Gateway
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+
+  /encryption/encrypt:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Encrypt a dataset or subdataset (by enqueuing the request for latter processing)
+      operationId: Encrypt
+      description: Encrypt a dataset or subdataset (by enqueuing the request for latter processing)
+      responses:
+        '201':
+          description: The response code means that the encryption has been initiated. Status of the operation can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and encryption can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to encrypt from or to is not readable. User doesn't have the correct rights to read the source file.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that the source path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the source path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+              - project
+            properties:
+              source_system:
+                type: string
+              source_path:
+                type: string
+              project:
+                type: string
+                
+  /encryption/decrypt:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Decrypt a dataset or subdataset (by enqueuing the request for latter processing)
+      operationId: Decrypt
+      description: Decrypt a dataset or subdataset (by enqueuing the request for latter processing)
+      responses:
+        '201':
+          description: The response code means that the decryption has been initiated. Status of the operation can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and decryption can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to decrypt from or to is not readable. User doesn't have the correct rights to read the source file.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that the source path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+              - project
+            properties:
+              source_system:
+                type: string
+              source_path:
+                type: string
+              project:
+                type: string
+                
+  /encryption/compress:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Compress a dataset or subdataset (by enqueuing the request for latter processing)
+      operationId: Compress
+      description: Compress a dataset or subdataset (by enqueuing the request for latter processing)
+      responses:
+        '201':
+          description: The response code means that the compression has been initiated. Status of the operation can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and compression can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to compress is not readable. User doesn't have the correct rights to read the source file.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that the source path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+            properties:
+              source_system:
+                type: string
+              source_path:
+                type: string
+                
+  /encryption/decompress:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Decompress a dataset or subdataset (by enqueuing the request for latter processing)
+      operationId: Decompress
+      description: Decompress a dataset or subdataset (by enqueuing the request for latter processing)
+      responses:
+        '201':
+          description: The response code means that the decompression has been initiated. Status of the operation can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and decompression can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to compress is not readable by the user. User doesn't have the correct rights to read the source file.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+            properties:
+              source_system:
+                type: string
+              source_path:
+                type: string
+
+  /encryption/compress_encrypt:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Compress and encrypt a dataset or subdataset (by enqueuing the request for latter processing)
+      operationId: CompressEncrypt
+      description: Compress and encrypt a dataset or subdataset (by enqueuing the request for latter processing)
+      responses:
+        '201':
+          description: The response code means that the compression and encryption has been initiated. Status of the operation can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and compression with encryption can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to compress and encrypt is not readable by the user. User doesn't have the correct rights to read the source file.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the source path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+              - project
+            properties:
+              source_system:
+                type: string
+              source_path:
+                type: string
+              project:
+                type: string
+                
+  /encryption/decrypt_decompress:
+    post:
+      tags:
+        - dataSetManagement
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      summary: Decrypt and decompress a dataset or subdataset (by enqueuing the request for latter processing)
+      operationId: DecryptDecompress
+      description: Decrypt and decompress a dataset or subdataset (by enqueuing the request for latter processing)
+      responses:
+        '201':
+          description: The response code means that the decryption and decompression has been initiated. Status of the operation can be checked by querying the status.
+          schema:
+            $ref: "#/definitions/RequestID"
+        '400':
+          description: This means that there's something wrong in the input parameters and the server couldn't understand the request.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak decryption with decompression can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '403':
+          description: This means that the resource the user is trying to decrypt and decompress from or to is not readable or writable by the user. User doesn't have the correct rights to read the source file.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description:  This means that either the source path on the system doesn't exist.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the either the source path is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '429':
+          description: This means that the user has sent too many requests in a given amount of time. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+      parameters:
+        - in: body
+          name: parameters
+          description: parameters
+          required: true
+          schema:
+            type: object
+            required:
+              - source_system
+              - source_path
+              - project
+            properties:
+              source_system:
+                type: string
+              source_path:
+                type: string
+              project:
+                type: string
+                
+  /encryption/encrypt/{request_id}:
+    get:
+      security: []
+      tags:
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Check the status of a encryption
+      operationId: CheckEncryptionStatus
+      description: Check the status of a encryption
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+              target_path:
+                type: string
+                description: Single path for encryption endpoints
+
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and encryption can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+
+  /encryption/decrypt/{request_id}:
+    get:
+      security: []
+      tags:
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Check the status of a decryption
+      operationId: CheckDecryptionStatus
+      description: Check the status of a decryption
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+              target_path:
+                type: string
+                description: Single path for encryption endpoints
+
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and decryption can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+            
+  /encryption/compress_encrypt/{request_id}:
+    get:
+      security: []
+      tags:
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Check the status of compression with encryption
+      operationId: CheckCompressionEncryptionStatus
+      description: Check the status of compression with encryption
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+              target_path:
+                type: string
+                description: Single path for encryption endpoints
+
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and compression with encryption can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+            
+  /encryption/decrypt_decompress/{request_id}:
+    get:
+      security: []
+      tags:
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Check the status of decryption with decompression
+      operationId: CheckDecryptionDecompressionStatus
+      description: Check the status of decryption with decompression
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+              target_path:
+                type: string
+                description: Single path for encryption endpoints
+
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and decryption with decompression can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /encryption/compress/{request_id}:
+    get:
+      security: []
+      tags:
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Check the status of a compression
+      operationId: CheckCompressionStatus
+      description: Check the status of a compression
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+              target_path:
+                type: string
+                description: Single path for encryption endpoints
+
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and compression can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /encryption/decompress/{request_id}:
+    get:
+      security: []
+      tags:
+        - dataSetManagement
+      produces:
+        - application/json
+      summary: Check the status of a decompression
+      operationId: CheckDecompressionStatus
+      description: Check the status of a decompression
+      parameters:
+        - in: path
+          name: request_id
+          required: true
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: This means that the status has been returned to the user in the response body.
+          schema:
+            type: object
+            required:
+              - status
+            properties:
+              status:
+                type: string
+              target_path:
+                type: string
+                description: Single path for encryption endpoints
+
+        '400':
+          description: This means that the request ID given by the user is incorrect.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '401':
+          description:  This means that the user is not authenticated with keycloak and decompression can't be triggered unless the user first log in with a valid user
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '404':
+          description: This means that the ID doesn't exist and thus a status can't be returned.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '414':
+          description: This means that the the request ID is longer than the server is willing to interpret.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        '500':
+          description: This means that something has gone wrong on the burst buffer. The user is advised to wait and send the request again.
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+

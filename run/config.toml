@@ -1,0 +1,30 @@
+# toml file for configuration of the dataset-management-interface
+
+[General]
+logfile = "logfile.log"
+logtoconsole = true
+# loglevel = "Info"
+loglevel = "Debug"
+serverport = 8000
+
+[Keycloak]
+host="keycloak.lrz.lexis-project.eu"
+realm = "Portal-testing"
+clientid = "Portal-client"
+clientsecret = "fb3adbc5-864a-4477-9c6b-cd4d498ed5b7"
+port=443
+usehttp=false
+redirecturl="https://lexis-test.srv.lrz.de/"
+
+#LRZ configuration
+[Irods]
+#irods1
+#service = "https://lexis-ddi.srv.lrz.de/demo"
+#irods2
+service = "https://lexis-ddi.srv.lrz.de/demo"
+gridmap = "https://lexis-lb-1.srv.lrz.de/gridftp"
+sshfs = "https://sshfs.lexis.lrz.de/ssh"
+steering = "https://lexis-lrzdata-steering.srv.lrz.de/staging"
+compress = "https://lexis-lrzdata-steering.srv.lrz.de/compress"
+datasize = "https://lexis-lrzdata-steering.srv.lrz.de/staging"
+encryption = "https://bb-001.srv.lrz.de/encryption"

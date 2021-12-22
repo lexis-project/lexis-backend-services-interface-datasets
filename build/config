@@ -1,0 +1,7 @@
+Host code.it4i.cz
+   StrictHostKeyChecking no
+   IdentityFile ~/.ssh/KEY
+   UserKnownHostsFile=/dev/null
+Host github.com
+   StrictHostKeyChecking no
+   UserKnownHostsFile=/dev/null
