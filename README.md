@@ -1,4 +1,13 @@
-# Notes on compiling and installing this software.
+# lexis-backend-services-interface-datasets
+
+This repository contains the interface to display datasets from the LEXIS DDI in the LEXIS Portal.
+
+## Acknowledgement
+
+This code repository is a result / contains results of the LEXIS project. The project has received funding from the European Union’s Horizon 2020 Research and Innovation programme (2014-2020) under grant agreement No. 825532.
+
+## Notes on compiling and installing this software.
+
 The swagger command used in server/make_server.sh and client/make_client.sh
 is not the standard swagger.
 Instead, use the swagger for go, available at https://github.com/Stratoscale/swagger.
@@ -18,14 +27,14 @@ You will also need GIT_TERMINAL_PROMPT=1 and GOPRIVATE="code.it4i.cz"
 
 Once you regenerate the client or the server, you will need to run the scripts/modsfix.sh script on the base directory of the repository.
 
-## Regarding Swagger:
+### Regarding Swagger:
 - version: 0.13.0 commit: 8135eb6728e43b73489e80f94426e6d387809502 (stratoscale/swagger:v1.0.9) generates wrong code.
 - stratoscale/swagger:v1.0.27 works
 - quay.io/goswagger/swagger:latest is the recommended version as of June 2020.
 
 - Add --template=stratoscale if you are using quai.io goswagger
 
-## Regarding front-ends:
+### Regarding front-ends:
 You want an HTTPS front-end to access this service.
 
 ### Apache
