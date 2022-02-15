@@ -1,5 +1,7 @@
 # lexis-backend-services-interface-datasets
 
+<a href="https://doi.org/10.5281/zenodo.6080494"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.6080494.svg" alt="DOI"></a>
+
 This repository contains the interface to display datasets from the LEXIS DDI in the LEXIS Portal.
 
 ## Acknowledgement
